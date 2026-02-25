@@ -1,0 +1,35 @@
+{
+  "id": "plugin-social-icons",
+  "name": "Social Icons Display",
+  "version": "1.0.0",
+  "description": "Display social media icons with customizable styling and animations",
+  "author": "LinkFlow Team",
+  "license": "MIT",
+  "homepage": "https://github.com/linkflow/plugin-social-icons",
+  "repository": "https://github.com/linkflow/plugin-social-icons",
+  "icon": "icons/social.svg",
+  "main": "src/index.ts",
+  "permissions": [
+    "links:read",
+    "links:create",
+    "links:update",
+    "links:delete",
+    "data:read",
+    "data:write",
+    "ui:register",
+    "mcp:tools"
+  ],
+  "linkTypes": [
+    {
+      "id": "social-icon",
+      "name": "Social Icon",
+      "description": "A social media profile link with icon",
+      "icon": "icons/social.svg"
+    }
+  ],
+  "dependencies": {
+    "@linkflow/plugin-sdk": "^1.0.0",
+    "react": "^18.0.0",
+    "lucide-react": "^0.263.0"
+  }
+}

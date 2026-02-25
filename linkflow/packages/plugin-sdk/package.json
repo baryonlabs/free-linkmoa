@@ -1,0 +1,18 @@
+{
+  "name": "@linkflow/plugin-sdk",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "description": "Plugin SDK for LinkFlow - Free & Open Source Link-in-Bio Platform",
+  "keywords": ["linkflow", "plugin", "sdk", "link-in-bio"],
+  "author": "LinkFlow Contributors",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "typescript": "^5.3.0"
+  }
+}

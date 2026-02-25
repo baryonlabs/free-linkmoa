@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: linkflow-app
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      DATABASE_PATH: ${DATABASE_PATH:-/app/data/linkflow.db}
+      PLUGINS_PATH: ${PLUGINS_PATH:-/app/plugins}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+    volumes:
+      # Persistent data volume for database
+      - linkflow-data:/app/data
+      # Plugin volume for development (optional)
+      - linkflow-plugins:/app/plugins
+      # Optional: local plugins directory for development
+      # - ./plugins:/app/plugins
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - linkflow-network
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: linkflow-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-linkflow}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-linkflow-dev-password}
+      POSTGRES_DB: ${DB_NAME:-linkflow}
+    volumes:
+      - linkflow-postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-linkflow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - linkflow-network
+    ports:
+      - "5432:5432"
+
+volumes:
+  linkflow-data:
+    driver: local
+  linkflow-plugins:
+    driver: local
+  linkflow-postgres:
+    driver: local
+
+networks:
+  linkflow-network:
+    driver: bridge
