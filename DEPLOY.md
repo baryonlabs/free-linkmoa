@@ -4,78 +4,308 @@
 
 ---
 
-## 빠른 시작
+## 어떤 방식으로 배포할까?
+
+링크인바이오 특성상 **"수정이 얼마나 잦냐"** 에 따라 최적 방식이 다릅니다.
+
+| | GitHub Pages | Vercel | Cloudflare Pages | Fly.io | Render |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **비용** | 완전 무료 | 완전 무료 | 완전 무료 | 무료(크레딧) | 무료(제한) |
+| **서버** | ❌ 없음 | 서버리스 | 서버리스/엣지 | 컨테이너 VM | 컨테이너 |
+| **DB (SQLite)** | ❌ | ❌ | ❌ | ✅ 영구 볼륨 | ❌ |
+| **외부 DB 필요** | ❌ | Turso/Neon | Turso/D1 | 필요없음 | Turso/Neon |
+| **콜드 스타트** | 없음(정적) | ~수백ms | ~수십ms(엣지) | ~수초 | 슬립 후 ~30초 |
+| **커스텀 도메인** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **자동 배포 (git push)** | ✅ Actions | ✅ | ✅ | ❌ 수동 | ✅ |
+| **대시보드·Auth** | ❌ 별도 구현 | ✅ | ✅ | ✅ | ✅ |
+| **신용카드** | 불필요 | 불필요 | 불필요 | 필요(본인확인) | 불필요 |
+| **추천 용도** | 정적 프로필 | 동적 전체 | 빠른 동적 | 현재 코드 그대로 | 백업 옵션 |
+
+---
+
+## Option A — GitHub Pages (진짜 0원, 가장 단순)
+
+> **핵심 아이디어**: 링크 데이터를 DB 대신 `links.yml` 파일에 저장
+> → 파일 수정 → `git push` → GitHub Actions가 빌드 → Pages 배포
+
+```
+links.yml 수정 (Claude MCP 또는 직접 편집)
+       ↓
+  git push
+       ↓
+  GitHub Actions (빌드·렌더링)
+       ↓
+  GitHub Pages (정적 HTML 서빙)
+```
+
+### 언제 이 방식이 맞나?
+
+- 링크가 하루에 한두 번 이하로 바뀜
+- 대시보드 UI보단 파일 편집이 편함
+- 실시간 클릭 애널리틱스가 굳이 필요 없음
+- **신용카드 없이 진짜 공짜** 원함
+
+### 구조 (기존 앱과 별개)
+
+```yaml
+# profile.yml
+name: "홍길동"
+bio: "개발자 & 크리에이터"
+avatar: "https://..."
+
+links:
+  - title: "인스타그램"
+    url: "https://instagram.com/..."
+    icon: "instagram"
+  - title: "블로그"
+    url: "https://myblog.com"
+    icon: "link"
+  - title: "유튜브"
+    url: "https://youtube.com/..."
+    icon: "youtube"
+```
+
+### GitHub Actions 워크플로우
+
+`.github/workflows/pages.yml`:
+```yaml
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [main]
+    paths: ['profile.yml', 'links.yml', 'theme.yml']
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci && npm run build:static
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+      - uses: actions/deploy-pages@v4
+```
+
+### MCP로 수정하는 방법 (파일 방식)
+
+```
+Claude에게: "인스타그램 링크 추가해줘"
+     ↓
+MCP가 links.yml 파일 직접 수정
+     ↓
+git commit & push (자동)
+     ↓
+GitHub Actions 트리거 → Pages 배포
+```
+
+Claude Desktop 설정:
+```json
+{
+  "mcpServers": {
+    "free-linkmoa-pages": {
+      "command": "node",
+      "args": ["/path/to/linkflow/apps/mcp-server/dist/index.js"],
+      "env": {
+        "MODE": "file",
+        "LINKS_FILE": "/path/to/free-linkmoa/links.yml",
+        "REPO_PATH": "/path/to/free-linkmoa",
+        "AUTO_COMMIT": "true"
+      }
+    }
+  }
+}
+```
+
+### 한계
+
+- 실시간 클릭 수 집계 없음 (Google Analytics 스크립트로 보완 가능)
+- 로그인/대시보드 UI 없음 → 파일 편집 또는 MCP만 사용
+- 배포 반영까지 ~1분 소요 (Actions 실행 시간)
+
+---
+
+## Option B — Vercel + Turso (현재 코드 최소 수정)
+
+> Next.js는 Vercel이 만들었기 때문에 궁합이 최고
+> SQLite 대신 Turso(libSQL) 사용 → 영구 무료 클라우드 DB
+
+```
+git push → Vercel 자동 빌드·배포 (수십 초)
+Turso DB → 전 세계 엣지 복제, 무료 티어 500 DBs / 9GB
+```
+
+### 무료 한도
+
+| 서비스 | 무료 한도 |
+|-------|---------|
+| Vercel | 100GB 대역폭, Serverless 실행 |
+| Turso | DB 500개, 용량 9GB, 월 10억 읽기 |
+
+### 설정
 
 ```bash
-# 1. 의존성 설치
-cd linkflow && npm install
+# Turso CLI 설치
+curl -sSfL https://get.tur.so/install.sh | bash
 
-# 2. 로컬 실행
-npm run dev          # 웹앱 → localhost:3000
-npm run dev:mcp      # MCP 서버 (별도 터미널)
+# DB 생성
+turso db create free-linkmoa
 
-# 3. Fly.io 무료 배포
-../scripts/deploy.sh fly
+# 연결 URL + 토큰 발급
+turso db show free-linkmoa --url
+turso db tokens create free-linkmoa
 
-# 4. Claude MCP 연결
-../scripts/mcp-setup.sh
+# Vercel 환경변수 설정
+vercel env add TURSO_DATABASE_URL
+vercel env add TURSO_AUTH_TOKEN
+```
+
+`lib/db.ts`를 `@libsql/client`로 교체:
+```typescript
+import { createClient } from '@libsql/client';
+
+const db = createClient({
+  url: process.env.TURSO_DATABASE_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
+```
+
+### MCP 연결 방법
+
+Turso는 HTTP API를 지원하므로 원격 MCP도 가능:
+```json
+{
+  "mcpServers": {
+    "free-linkmoa": {
+      "command": "node",
+      "args": ["/path/to/mcp-server/dist/index.js"],
+      "env": {
+        "TURSO_DATABASE_URL": "libsql://...",
+        "TURSO_AUTH_TOKEN": "...",
+        "LINKFLOW_TOKEN": "..."
+      }
+    }
+  }
+}
 ```
 
 ---
 
-## 1. 무료 배포 (Fly.io)
+## Option C — Cloudflare Pages + D1 (엣지, 가장 빠름)
 
-### 왜 Fly.io인가?
+> Cloudflare 글로벌 엣지 네트워크 + D1(SQLite 호환 DB)
+> 한국 사용자 응답속도 최고
 
-| 항목 | 내용 |
-|------|------|
-| VM | shared-cpu-1x × 3대 무료 |
-| 메모리 | 256MB |
-| 스토리지 | 3GB 영구 볼륨 (SQLite 저장) |
-| 트래픽 | 160GB/월 무료 |
-| 비용 | **0원** (개인 프로젝트 범위) |
-| 자동 슬립 | 트래픽 없으면 슬립 → 비용 절감 |
+```
+git push → Cloudflare Pages 자동 빌드
+D1 Database → Cloudflare 엣지 SQLite, 무료 5GB
+```
 
-### 첫 배포
+### 무료 한도
+
+| 서비스 | 무료 한도 |
+|-------|---------|
+| Cloudflare Pages | 무제한 요청, 500 빌드/월 |
+| D1 Database | 5GB 저장, 월 250만 읽기 |
+| Workers | 10만 요청/일 |
+
+### 설정
 
 ```bash
-# flyctl 설치 (Mac)
-brew install flyctl
+# Wrangler CLI 설치
+npm install -g wrangler
+wrangler login
 
-# 로그인 (GitHub 계정 사용 가능)
-fly auth login
+# D1 DB 생성
+wrangler d1 create free-linkmoa
 
-# 배포 (linkflow/ 디렉토리에서)
+# next.config.js → Edge runtime 설정 필요
+```
+
+> **주의**: Next.js Edge Runtime은 `node:sqlite` 미지원 → `@cloudflare/d1` 드라이버 필요
+
+---
+
+## Option D — Fly.io (현재 코드 그대로)
+
+기존 설정 그대로 사용. SQLite 파일을 영구 볼륨에 저장.
+
+```bash
+brew install flyctl && fly auth login
 cd linkflow
-fly launch --name free-linkmoa --region nrt   # 첫 실행만
-
-# 이후 업데이트
+fly launch --name free-linkmoa --region nrt
+fly secrets set JWT_SECRET="$(openssl rand -hex 64)"
+fly volumes create linkflow_data --size 1 --region nrt
 fly deploy
 ```
 
-### 자동 배포 스크립트
+> **주의**: 신용카드 등록 필요 (청구 안 되지만 본인 확인 목적)
+> 무료 allowance 안에서는 0원
+
+---
+
+## Option E — Render (신용카드 불필요, 백업 옵션)
 
 ```bash
-# 처음부터 끝까지 자동
-./scripts/deploy.sh fly
+# render.yaml 생성 후 GitHub 연동
+services:
+  - type: web
+    name: free-linkmoa
+    runtime: docker
+    dockerfilePath: ./linkflow/docker/Dockerfile
+    plan: free
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
 ```
 
-### 환경 변수 설정
+> **주의**: 무료 플랜은 15분 비활성 후 슬립, 재시작 ~30초
+> 영구 디스크 없음 → SQLite 재시작마다 초기화 (Turso 연동 필요)
 
-```bash
-# JWT 시크릿 (필수)
-fly secrets set JWT_SECRET="$(openssl rand -hex 64)"
+---
 
-# 확인
-fly secrets list
+## 유사 프로젝트 비교
+
+| 프로젝트 | 방식 | 특징 |
+|---------|------|------|
+| **Linktree** | SaaS | 유료, 비공개 |
+| **Bento.me** | SaaS | 무료, 위젯형 |
+| **bio.link** | SaaS | 무료, 단순 |
+| **LinkStack** | 셀프호스팅 | PHP, Docker |
+| **Lynx** | 셀프호스팅 | Go, 가볍다 |
+| **Dub.co** | SaaS+오픈소스 | 단축URL+바이오 |
+| **Milkdown/Notion** | 문서형 | 링크 정리 목적 |
+| **free-linkmoa** | **오픈소스+MCP** | **AI 네이티브 수정** ← |
+
+free-linkmoa가 차별화되는 점: **Claude MCP로 자연어 관리**
+
+---
+
+## 결론: 어떤 걸 선택할까?
+
 ```
+"신용카드 없이 완전 무료 + 가끔 수정"
+  → GitHub Pages (Option A)
+     links.yml 수정 → git push → 자동 배포
 
-### 배포 후 확인
+"대시보드 UI + 자동 git push 배포 + 완전 무료"
+  → Vercel + Turso (Option B)
+     코드 약간 수정 필요 (node:sqlite → @libsql/client)
 
-```bash
-fly status          # 앱 상태
-fly logs            # 실시간 로그
-fly ssh console     # SSH 접속
+"현재 코드 그대로 + 전 세계 빠름"
+  → Cloudflare Pages + D1 (Option C)
+     엣지 런타임 설정 필요
+
+"현재 코드 그대로 + 설정 최소"
+  → Fly.io (Option D) ← 지금 fly.toml 있음
+     신용카드 필요
 ```
 
 ---
@@ -88,16 +318,13 @@ fly ssh console     # SSH 접속
 ### 자동 설정
 
 ```bash
-# 로컬 서버 실행 후
 npm run dev &
-
-# MCP 설정 (토큰 자동 발급 + Claude 설정)
 ./scripts/mcp-setup.sh
 ```
 
 ### 수동 설정
 
-`~/Library/Application Support/Claude/claude_desktop_config.json`에 추가:
+`~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
@@ -106,7 +333,7 @@ npm run dev &
       "command": "node",
       "args": ["/절대경로/linkflow/apps/mcp-server/dist/index.js"],
       "env": {
-        "LINKFLOW_TOKEN": "로그인-후-발급받은-JWT",
+        "LINKFLOW_TOKEN": "JWT토큰",
         "DATABASE_PATH": "/절대경로/linkflow/apps/web/data/linkflow.db"
       }
     }
@@ -114,7 +341,7 @@ npm run dev &
 }
 ```
 
-### Claude에게 할 수 있는 것들
+### Claude에게 말할 수 있는 것들
 
 ```
 "내 링크 목록 보여줘"
@@ -126,7 +353,7 @@ npm run dev &
 "구독자 목록 CSV로 내보내줘"
 ```
 
-### MCP 사용 가능한 도구 목록
+### MCP 도구 목록
 
 | 카테고리 | 도구 |
 |---------|------|
@@ -139,22 +366,17 @@ npm run dev &
 
 ---
 
-## 3. 스크립트 수정
-
-MCP 없이 CLI로 빠르게 수정하는 방법입니다.
-
-### 링크 관리 (REST API)
+## 3. REST API로 직접 수정
 
 ```bash
 # 토큰 발급
 TOKEN=$(curl -s -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"emailOrUsername":"내이메일","password":"비밀번호"}' \
+  -d '{"emailOrUsername":"이메일","password":"비밀번호"}' \
   | jq -r '.token')
 
 # 링크 목록
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:3000/api/links | jq
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/links | jq
 
 # 새 링크 추가
 curl -X POST -H "Authorization: Bearer $TOKEN" \
@@ -162,135 +384,32 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
   -d '{"title":"블로그","url":"https://myblog.com"}' \
   http://localhost:3000/api/links
 
-# 링크 수정 (ID 필요)
+# 수정
 curl -X PATCH -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"title":"새 제목"}' \
   http://localhost:3000/api/links/링크ID
 
-# 링크 삭제
+# 삭제
 curl -X DELETE -H "Authorization: Bearer $TOKEN" \
   http://localhost:3000/api/links/링크ID
 ```
 
-### 코드 수정 후 재배포
-
-```bash
-# 수정 → 테스트 → 배포 한 번에
-git add -A && git commit -m "fix: 수정 내용" && \
-cd linkflow && fly deploy
-```
-
-### Fly.io 원격 SQLite 접근
-
-```bash
-# 프로덕션 DB 직접 쿼리 (주의해서 사용)
-fly ssh console -C "node -e \"
-const { DatabaseSync } = require('node:sqlite');
-const db = new DatabaseSync('/app/data/linkflow.db');
-const links = db.prepare('SELECT title, url FROM links LIMIT 10').all();
-console.table(links);
-\""
-```
-
 ---
 
-## 4. 유지비용 0원 달성
-
-### 아키텍처
-
-```
-[사용자 브라우저]
-      ↓
-[Fly.io 무료 VM] ← 트래픽 없으면 자동 슬립
-      ↓
-[SQLite 파일] ← Fly.io 영구 볼륨 (1GB 무료)
-```
-
-### 비용 분석
-
-| 서비스 | 무료 한도 | 초과 시 비용 |
-|-------|---------|------------|
-| Fly.io VM | 3대 × 256MB | $0.0001/s |
-| Fly.io 볼륨 | 3GB | $0.15/GB/월 |
-| 대역폭 | 160GB/월 | $0.02/GB |
-| 도메인 | fly.dev 서브도메인 무료 | 커스텀 도메인 $10/년 |
-
-**개인 link-in-bio 페이지 = 월 0원**
-
-### 비용이 발생하는 경우
-
-- 월 방문자 10만+ (대역폭 초과)
-- 파일 저장이 3GB 초과
-- 고가용성이 필요해 상시 실행 설정 시
-
-### 슬립 설정 확인
-
-`fly.toml`에서 확인:
-```toml
-auto_stop_machines = "stop"  # 슬립 활성화
-min_machines_running = 0     # 평시 0대 → 비용 0
-```
-
----
-
-## 5. 커스텀 도메인 연결 (선택)
+## 4. 문제 해결
 
 ```bash
-# 도메인 연결
-fly certs create yourdomain.com
+# Fly.io 로그
+fly logs --tail
 
-# DNS 설정 (도메인 레지스트라에서)
-# CNAME: @ → free-linkmoa.fly.dev
-# 또는 A레코드: @ → fly.io IP
-
-# SSL 자동 발급 확인
-fly certs show yourdomain.com
-```
-
----
-
-## 6. 문제 해결
-
-### 배포 실패
-
-```bash
-fly logs --tail          # 실시간 로그 확인
-fly doctor               # 설정 검사
-fly status               # VM 상태 확인
-```
-
-### DB 초기화 필요
-
-```bash
-fly ssh console -C "rm /app/data/linkflow.db"
-fly machine restart
-```
-
-### MCP 연결 안 됨
-
-```bash
-# 토큰 재발급
+# MCP 재연결
 ./scripts/mcp-setup.sh
+# → Claude Desktop 재시작 필요
 
-# Claude Desktop 완전 종료 후 재시작
-# (Cmd+Q 또는 작업관리자에서 종료)
-```
-
----
-
-## 전체 흐름 요약
-
-```
-코드 수정
-  → git commit & push
-  → fly deploy (자동 빌드 & 배포)
-  → 확인: fly logs
-
-일상 운영
-  → Claude에게 자연어로 요청 (MCP)
-  → 또는 REST API 직접 호출
-  → 대시보드 접속: https://free-linkmoa.fly.dev/dashboard
+# DB 리셋 (Fly.io)
+fly ssh console -C "rm /app/data/linkflow.db && exit"
+fly machine restart
 ```
 
 ---
