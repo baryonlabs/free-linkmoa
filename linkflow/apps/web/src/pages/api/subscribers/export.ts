@@ -8,18 +8,19 @@ export default withAuth(async function handler(req: NextApiRequest, res: NextApi
   }
 
   try {
-    const db = getDb();
-    const subscribers = db.prepare(
-      `SELECT id, email, subscribed_at FROM subscribers
-       WHERE user_id = ? ORDER BY subscribed_at ASC`
-    ).all(user.userId) as any[];
+    const db = await getDb();
+    const { rows } = await db.execute({
+      sql: `SELECT id, email, subscribed_at FROM subscribers
+       WHERE user_id = ? ORDER BY subscribed_at ASC`,
+      args: [user.userId],
+    });
 
-    if (subscribers.length === 0) {
+    if (rows.length === 0) {
       return res.status(400).json({ error: 'No subscribers to export' });
     }
 
     let csv = 'Email,Subscribed At\n';
-    for (const sub of subscribers) {
+    for (const sub of rows) {
       const email = (sub.email as string).replace(/"/g, '""');
       csv += `"${email}","${sub.subscribed_at}"\n`;
     }

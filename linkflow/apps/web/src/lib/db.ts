@@ -1,156 +1,177 @@
-import { DatabaseSync } from 'node:sqlite';
+/**
+ * Database client — @libsql/client
+ *
+ * Local dev:  DATABASE_PATH=/path/to/linkflow.db  (auto file: URL)
+ * Vercel+Turso: TURSO_DATABASE_URL=libsql://...  TURSO_AUTH_TOKEN=...
+ *
+ * 로컬 개발 시 file: URL을 자동으로 사용하고 스키마를 초기화합니다.
+ * Turso 원격 DB는 스키마를 별도로 마이그레이션해야 합니다 (scripts/turso-setup.sh).
+ */
+import { createClient, Client } from '@libsql/client';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuid } from 'uuid';
 
-const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'linkflow.db');
+const DB_PATH =
+  process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'linkflow.db');
 
-// Ensure data directory exists
-const dataDir = path.dirname(DB_PATH);
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+function buildUrl(): string {
+  if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL;
+  // 로컬 파일 모드: data 디렉토리 생성
+  const dataDir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  return `file:${DB_PATH}`;
 }
 
-let db: DatabaseSync | null = null;
+let client: Client | null = null;
 
-export function getDb(): DatabaseSync {
-  if (!db) {
-    db = new DatabaseSync(DB_PATH);
-    db.exec('PRAGMA journal_mode = WAL');
-    db.exec('PRAGMA foreign_keys = ON');
-    initializeDatabase(db);
+export async function getDb(): Promise<Client> {
+  if (client) return client;
+
+  client = createClient({
+    url: buildUrl(),
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  });
+
+  // 로컬 파일 DB만 자동 스키마 초기화 (Turso는 별도 마이그레이션)
+  if (!process.env.TURSO_DATABASE_URL) {
+    await initializeDatabase(client);
   }
-  return db;
+
+  return client;
 }
 
-function initializeDatabase(db: DatabaseSync) {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      username TEXT UNIQUE NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+// ── Schema ──────────────────────────────────────────────────────────────────
+const SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-    CREATE TABLE IF NOT EXISTS profiles (
-      id TEXT PRIMARY KEY,
-      user_id TEXT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      avatar_url TEXT,
-      title TEXT,
-      bio TEXT,
-      custom_logo_url TEXT,
-      social_links TEXT DEFAULT '{}',
-      theme_id TEXT,
-      seo_title TEXT,
-      seo_description TEXT,
-      custom_css TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+CREATE TABLE IF NOT EXISTS profiles (
+  id TEXT PRIMARY KEY,
+  user_id TEXT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  avatar_url TEXT,
+  title TEXT,
+  bio TEXT,
+  custom_logo_url TEXT,
+  social_links TEXT DEFAULT '{}',
+  theme_id TEXT,
+  seo_title TEXT,
+  seo_description TEXT,
+  custom_css TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-    CREATE TABLE IF NOT EXISTS links (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      title TEXT NOT NULL,
-      url TEXT NOT NULL DEFAULT '',
-      description TEXT,
-      icon_url TEXT,
-      thumbnail_url TEXT,
-      type TEXT DEFAULT 'standard',
-      position INTEGER DEFAULT 0,
-      enabled INTEGER DEFAULT 1,
-      scheduled_from DATETIME,
-      scheduled_to DATETIME,
-      utm_source TEXT,
-      utm_medium TEXT,
-      utm_campaign TEXT,
-      custom_css TEXT,
-      animation_type TEXT DEFAULT 'none',
-      highlight INTEGER DEFAULT 0,
-      click_count INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+CREATE TABLE IF NOT EXISTS links (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL DEFAULT '',
+  description TEXT,
+  icon_url TEXT,
+  thumbnail_url TEXT,
+  type TEXT DEFAULT 'standard',
+  position INTEGER DEFAULT 0,
+  enabled INTEGER DEFAULT 1,
+  scheduled_from DATETIME,
+  scheduled_to DATETIME,
+  utm_source TEXT,
+  utm_medium TEXT,
+  utm_campaign TEXT,
+  custom_css TEXT,
+  animation_type TEXT DEFAULT 'none',
+  highlight INTEGER DEFAULT 0,
+  click_count INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-    CREATE TABLE IF NOT EXISTS themes (
-      id TEXT PRIMARY KEY,
-      user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
-      name TEXT NOT NULL,
-      type TEXT DEFAULT 'custom',
-      config TEXT NOT NULL,
-      preview_url TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+CREATE TABLE IF NOT EXISTS themes (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  type TEXT DEFAULT 'custom',
+  config TEXT NOT NULL,
+  preview_url TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-    CREATE TABLE IF NOT EXISTS analytics_events (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      link_id TEXT REFERENCES links(id) ON DELETE SET NULL,
-      event_type TEXT NOT NULL,
-      referrer TEXT,
-      user_agent TEXT,
-      country TEXT,
-      city TEXT,
-      device_type TEXT,
-      browser TEXT,
-      os TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  link_id TEXT REFERENCES links(id) ON DELETE SET NULL,
+  event_type TEXT NOT NULL,
+  referrer TEXT,
+  user_agent TEXT,
+  country TEXT,
+  city TEXT,
+  device_type TEXT,
+  browser TEXT,
+  os TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-    CREATE TABLE IF NOT EXISTS subscribers (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      email TEXT NOT NULL,
-      name TEXT,
-      metadata TEXT DEFAULT '{}',
-      subscribed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(user_id, email)
-    );
+CREATE TABLE IF NOT EXISTS subscribers (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  name TEXT,
+  metadata TEXT DEFAULT '{}',
+  subscribed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, email)
+);
 
-    CREATE TABLE IF NOT EXISTS plugin_installations (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      plugin_id TEXT NOT NULL,
-      plugin_name TEXT NOT NULL,
-      version TEXT NOT NULL,
-      config TEXT DEFAULT '{}',
-      enabled INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(user_id, plugin_id)
-    );
+CREATE TABLE IF NOT EXISTS plugin_installations (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plugin_id TEXT NOT NULL,
+  plugin_name TEXT NOT NULL,
+  version TEXT NOT NULL,
+  config TEXT DEFAULT '{}',
+  enabled INTEGER DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, plugin_id)
+);
 
-    CREATE TABLE IF NOT EXISTS audit_logs (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      resource_type TEXT NOT NULL,
-      resource_id TEXT,
-      action TEXT NOT NULL,
-      changes TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  resource_type TEXT NOT NULL,
+  resource_id TEXT,
+  action TEXT NOT NULL,
+  changes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-    -- Indexes
-    CREATE INDEX IF NOT EXISTS idx_links_user_id ON links(user_id);
-    CREATE INDEX IF NOT EXISTS idx_links_position ON links(user_id, position);
-    CREATE INDEX IF NOT EXISTS idx_analytics_user_id ON analytics_events(user_id);
-    CREATE INDEX IF NOT EXISTS idx_analytics_link_id ON analytics_events(link_id);
-    CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics_events(created_at);
-    CREATE INDEX IF NOT EXISTS idx_analytics_event_type ON analytics_events(user_id, event_type);
-    CREATE INDEX IF NOT EXISTS idx_subscribers_user_id ON subscribers(user_id);
-  `);
+CREATE INDEX IF NOT EXISTS idx_links_user_id ON links(user_id);
+CREATE INDEX IF NOT EXISTS idx_links_position ON links(user_id, position);
+CREATE INDEX IF NOT EXISTS idx_analytics_user_id ON analytics_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_link_id ON analytics_events(link_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_analytics_event_type ON analytics_events(user_id, event_type);
+CREATE INDEX IF NOT EXISTS idx_subscribers_user_id ON subscribers(user_id);
+`;
 
-  // Seed built-in themes if none exist
-  const themeCount = db.prepare('SELECT COUNT(*) as count FROM themes WHERE type = ?').get('builtin') as { count: number };
-  if (themeCount.count === 0) {
-    seedBuiltinThemes(db);
+async function initializeDatabase(db: Client) {
+  await db.executeMultiple(SCHEMA_SQL);
+
+  const { rows } = await db.execute(
+    "SELECT COUNT(*) as count FROM themes WHERE type = 'builtin'"
+  );
+  if ((rows[0]?.count as number) === 0) {
+    await seedBuiltinThemes(db);
   }
 }
 
-function seedBuiltinThemes(db: DatabaseSync) {
+async function seedBuiltinThemes(db: Client) {
   const themes = [
     {
       id: uuid(), name: 'Minimal Light', config: {
@@ -209,10 +230,13 @@ function seedBuiltinThemes(db: DatabaseSync) {
     }
   ];
 
-  const stmt = db.prepare('INSERT INTO themes (id, user_id, name, type, config) VALUES (?, NULL, ?, ?, ?)');
-  for (const theme of themes) {
-    stmt.run(theme.id, theme.name, 'builtin', JSON.stringify(theme.config));
-  }
+  await db.batch(
+    themes.map((theme) => ({
+      sql: 'INSERT INTO themes (id, user_id, name, type, config) VALUES (?, NULL, ?, ?, ?)',
+      args: [theme.id, theme.name, 'builtin', JSON.stringify(theme.config)],
+    })),
+    'write'
+  );
 }
 
 export default getDb;

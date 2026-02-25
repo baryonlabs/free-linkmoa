@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Login user
-    const result = loginUser(emailOrUsername, password);
+    const result = await loginUser(emailOrUsername, password);
 
     if (!result.success) {
       return res.status(401).json({ error: (result as { success: false; error: string }).error });

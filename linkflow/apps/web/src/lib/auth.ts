@@ -52,7 +52,6 @@ export function getUserFromRequest(req: NextApiRequest): AuthTokenPayload | null
   }
 }
 
-// Middleware-style auth check
 export function withAuth(
   handler: (req: NextApiRequest, res: NextApiResponse, user: AuthTokenPayload) => Promise<any>
 ) {
@@ -65,32 +64,33 @@ export function withAuth(
   };
 }
 
-export function registerUser(username: string, email: string, password: string): AuthResult {
-  const db = getDb();
+export async function registerUser(
+  username: string,
+  email: string,
+  password: string
+): Promise<AuthResult> {
+  const db = await getDb();
   const id = uuid();
   const profileId = uuid();
-  const passwordHash = bcrypt.hashSync(password, 12);
-
-  const insertUser = db.prepare(
-    'INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)'
-  );
-  const insertProfile = db.prepare(
-    'INSERT INTO profiles (id, user_id, title, bio, social_links) VALUES (?, ?, ?, ?, ?)'
-  );
+  const passwordHash = await hashPassword(password);
 
   try {
-    db.exec('BEGIN TRANSACTION');
-    try {
-      insertUser.run(id, username.toLowerCase(), email.toLowerCase(), passwordHash);
-      insertProfile.run(profileId, id, username, '', '{}');
-      db.exec('COMMIT');
-    } catch (err) {
-      db.exec('ROLLBACK');
-      throw err;
-    }
+    await db.batch(
+      [
+        {
+          sql: 'INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)',
+          args: [id, username.toLowerCase(), email.toLowerCase(), passwordHash],
+        },
+        {
+          sql: 'INSERT INTO profiles (id, user_id, title, bio, social_links) VALUES (?, ?, ?, ?, ?)',
+          args: [profileId, id, username, '', '{}'],
+        },
+      ],
+      'write'
+    );
   } catch (err: any) {
     const msg = err?.message || '';
-    if (msg.includes('UNIQUE constraint failed')) {
+    if (msg.includes('UNIQUE')) {
       if (msg.includes('users.username')) return { success: false, error: 'Username already taken' };
       if (msg.includes('users.email')) return { success: false, error: 'Email already registered' };
       return { success: false, error: 'Username or email already taken' };
@@ -104,18 +104,29 @@ export function registerUser(username: string, email: string, password: string):
   return { success: true, token, user: { id, username: lowerUsername, email: lowerEmail } };
 }
 
-export function loginUser(emailOrUsername: string, password: string): AuthResult {
-  const db = getDb();
+export async function loginUser(emailOrUsername: string, password: string): Promise<AuthResult> {
+  const db = await getDb();
   const lower = emailOrUsername.toLowerCase();
-  const user = db.prepare(
-    'SELECT * FROM users WHERE email = ? OR username = ?'
-  ).get(lower, lower) as any;
 
+  const { rows } = await db.execute({
+    sql: 'SELECT * FROM users WHERE email = ? OR username = ?',
+    args: [lower, lower],
+  });
+
+  const user = rows[0] as any;
   if (!user) return { success: false, error: 'Invalid credentials' };
 
-  const valid = bcrypt.compareSync(password, user.password_hash);
+  const valid = await verifyPassword(password, user.password_hash as string);
   if (!valid) return { success: false, error: 'Invalid credentials' };
 
-  const token = generateToken({ userId: user.id, username: user.username, email: user.email });
-  return { success: true, token, user: { id: user.id, username: user.username, email: user.email } };
+  const token = generateToken({
+    userId: user.id as string,
+    username: user.username as string,
+    email: user.email as string,
+  });
+  return {
+    success: true,
+    token,
+    user: { id: user.id as string, username: user.username as string, email: user.email as string },
+  };
 }

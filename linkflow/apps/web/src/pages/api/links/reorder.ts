@@ -20,38 +20,39 @@ export default withAuth(async function handler(req: NextApiRequest, res: NextApi
       }
     }
 
-    const db = getDb();
+    const db = await getDb();
     const now = new Date().toISOString();
+    const userId = user.userId;
 
-    db.exec('BEGIN TRANSACTION');
-    try {
-      for (const item of items) {
-        const link = db.prepare('SELECT id FROM links WHERE id = ? AND user_id = ?').get(item.id, user.userId);
-        if (!link) {
-          throw new Error(`Link ${item.id} not found or does not belong to user`);
-        }
-        db.prepare('UPDATE links SET position = ?, updated_at = ? WHERE id = ?').run(
-          item.position, now, item.id
-        );
-      }
-      db.exec('COMMIT');
-    } catch (err) {
-      db.exec('ROLLBACK');
-      throw err;
+    // Verify all items belong to this user
+    const placeholders = items.map(() => '?').join(', ');
+    const { rows: ownedRows } = await db.execute({
+      sql: `SELECT id FROM links WHERE user_id = ? AND id IN (${placeholders})`,
+      args: [userId, ...items.map((i) => i.id)],
+    });
+
+    if (ownedRows.length !== items.length) {
+      return res.status(404).json({ error: 'One or more links not found' });
     }
 
-    const updatedLinks = db.prepare(
-      `SELECT id, user_id, title, url, description, type, icon_url, thumbnail_url,
+    await db.batch(
+      items.map((item) => ({
+        sql: 'UPDATE links SET position = ?, updated_at = ? WHERE id = ?',
+        args: [item.position, now, item.id],
+      })),
+      'write'
+    );
+
+    const { rows: updatedLinks } = await db.execute({
+      sql: `SELECT id, user_id, title, url, description, type, icon_url, thumbnail_url,
               animation_type, highlight, enabled, position, click_count, created_at, updated_at
-       FROM links WHERE user_id = ? ORDER BY position ASC`
-    ).all(user.userId);
+       FROM links WHERE user_id = ? ORDER BY position ASC`,
+      args: [userId],
+    });
 
     return res.status(200).json(updatedLinks);
   } catch (error) {
     console.error('Reorder links error:', error);
-    if (error instanceof Error && error.message.includes('not found')) {
-      return res.status(404).json({ error: error.message });
-    }
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

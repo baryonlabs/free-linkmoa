@@ -16,21 +16,19 @@ export default withAuth(async function handler(req: NextApiRequest, res: NextApi
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse, userId: string) {
   try {
-    const db = getDb();
-
-    const builtinThemes = db.prepare(
-      `SELECT id, name, type, config, created_at, updated_at FROM themes WHERE type = 'builtin'`
-    ).all();
-
-    const customThemes = db.prepare(
-      `SELECT id, name, type, config, created_at, updated_at FROM themes WHERE user_id = ? AND type = 'custom'`
-    ).all(userId);
-
-    const allThemes = [...builtinThemes, ...customThemes].map((theme: any) => ({
+    const db = await getDb();
+    const { rows: builtinRows } = await db.execute({
+      sql: `SELECT id, name, type, config, created_at, updated_at FROM themes WHERE type = 'builtin'`,
+      args: [],
+    });
+    const { rows: customRows } = await db.execute({
+      sql: `SELECT id, name, type, config, created_at, updated_at FROM themes WHERE user_id = ? AND type = 'custom'`,
+      args: [userId],
+    });
+    const allThemes = [...builtinRows, ...customRows].map((theme: any) => ({
       ...theme,
       config: theme.config ? JSON.parse(theme.config as string) : null,
     }));
-
     return res.status(200).json(allThemes);
   } catch (error) {
     console.error('Get themes error:', error);
@@ -40,28 +38,25 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, userId: stri
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse, userId: string) {
   try {
-    const db = getDb();
+    const db = await getDb();
     const { name, config } = req.body;
-
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ error: 'Theme name is required' });
     }
     if (!config || typeof config !== 'object') {
       return res.status(400).json({ error: 'Theme config is required and must be an object' });
     }
-
     const themeId = uuidv4();
     const now = new Date().toISOString();
-
-    db.prepare(
-      `INSERT INTO themes (id, user_id, name, type, config, created_at, updated_at)
-       VALUES (?, ?, ?, 'custom', ?, ?, ?)`
-    ).run(themeId, userId, name, JSON.stringify(config), now, now);
-
-    const newTheme = db.prepare(
-      `SELECT id, name, type, config, created_at, updated_at FROM themes WHERE id = ?`
-    ).get(themeId) as any;
-
+    await db.execute({
+      sql: `INSERT INTO themes (id, user_id, name, type, config, created_at, updated_at) VALUES (?, ?, ?, 'custom', ?, ?, ?)`,
+      args: [themeId, userId, name, JSON.stringify(config), now, now],
+    });
+    const { rows } = await db.execute({
+      sql: `SELECT id, name, type, config, created_at, updated_at FROM themes WHERE id = ?`,
+      args: [themeId],
+    });
+    const newTheme = rows[0] as any;
     return res.status(201).json({
       ...newTheme,
       config: newTheme.config ? JSON.parse(newTheme.config as string) : null,

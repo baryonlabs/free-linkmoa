@@ -15,15 +15,15 @@ export default withAuth(async function handler(req: NextApiRequest, res: NextApi
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse, userId: string) {
   try {
-    const db = getDb();
-    const profile = db.prepare(
-      `SELECT id, user_id, title, bio, avatar_url, custom_logo_url, social_links,
+    const db = await getDb();
+    const { rows } = await db.execute({
+      sql: `SELECT id, user_id, title, bio, avatar_url, custom_logo_url, social_links,
               theme_id, seo_title, seo_description, custom_css, created_at, updated_at
-       FROM profiles WHERE user_id = ?`
-    ).get(userId) as any;
-
+       FROM profiles WHERE user_id = ?`,
+      args: [userId],
+    });
+    const profile = rows[0] as any;
     if (!profile) return res.status(404).json({ error: 'Profile not found' });
-
     return res.status(200).json({
       ...profile,
       social_links: profile.social_links ? JSON.parse(profile.social_links as string) : null,
@@ -36,9 +36,12 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, userId: stri
 
 async function handlePatch(req: NextApiRequest, res: NextApiResponse, userId: string) {
   try {
-    const db = getDb();
-    const profile = db.prepare('SELECT id FROM profiles WHERE user_id = ?').get(userId);
-    if (!profile) return res.status(404).json({ error: 'Profile not found' });
+    const db = await getDb();
+    const { rows: existRows } = await db.execute({
+      sql: 'SELECT id FROM profiles WHERE user_id = ?',
+      args: [userId],
+    });
+    if (!existRows[0]) return res.status(404).json({ error: 'Profile not found' });
 
     const {
       title, bio, avatar_url, custom_logo_url, social_links,
@@ -48,7 +51,6 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, userId: st
     const now = new Date().toISOString();
     const updates: string[] = [];
     const values: any[] = [];
-
     const addField = (col: string, val: any) => { updates.push(`${col} = ?`); values.push(val); };
 
     if (title !== undefined) addField('title', title);
@@ -66,14 +68,18 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, userId: st
     updates.push('updated_at = ?');
     values.push(now, userId);
 
-    db.prepare(`UPDATE profiles SET ${updates.join(', ')} WHERE user_id = ?`).run(...values);
+    await db.execute({
+      sql: `UPDATE profiles SET ${updates.join(', ')} WHERE user_id = ?`,
+      args: values,
+    });
 
-    const updated = db.prepare(
-      `SELECT id, user_id, title, bio, avatar_url, custom_logo_url, social_links,
+    const { rows: updatedRows } = await db.execute({
+      sql: `SELECT id, user_id, title, bio, avatar_url, custom_logo_url, social_links,
               theme_id, seo_title, seo_description, custom_css, created_at, updated_at
-       FROM profiles WHERE user_id = ?`
-    ).get(userId) as any;
-
+       FROM profiles WHERE user_id = ?`,
+      args: [userId],
+    });
+    const updated = updatedRows[0] as any;
     return res.status(200).json({
       ...updated,
       social_links: updated.social_links ? JSON.parse(updated.social_links as string) : null,

@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "buildCommand": "cd linkflow && npm run build",
+  "outputDirectory": "linkflow/apps/web/.next",
+  "installCommand": "cd linkflow && npm install",
+  "framework": "nextjs",
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "linkflow/apps/web/src/pages/api/**/*.ts": {
+      "maxDuration": 10
+    }
+  }
+}

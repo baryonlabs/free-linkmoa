@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Register user
-    const result = registerUser(username, email, password);
+    const result = await registerUser(username, email, password);
 
     if (!result.success) {
       return res.status(400).json({ error: (result as { success: false; error: string }).error });

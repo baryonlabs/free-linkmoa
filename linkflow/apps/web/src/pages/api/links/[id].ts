@@ -26,10 +26,13 @@ const LINK_SELECT = `SELECT id, user_id, title, url, description, type, icon_url
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse, userId: string, linkId: string) {
   try {
-    const db = getDb();
-    const link = db.prepare(`${LINK_SELECT} WHERE id = ? AND user_id = ?`).get(linkId, userId);
-    if (!link) return res.status(404).json({ error: 'Link not found' });
-    return res.status(200).json(link);
+    const db = await getDb();
+    const { rows } = await db.execute({
+      sql: `${LINK_SELECT} WHERE id = ? AND user_id = ?`,
+      args: [linkId, userId],
+    });
+    if (!rows[0]) return res.status(404).json({ error: 'Link not found' });
+    return res.status(200).json(rows[0]);
   } catch (error) {
     console.error('Get link error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -38,9 +41,12 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, userId: stri
 
 async function handlePatch(req: NextApiRequest, res: NextApiResponse, userId: string, linkId: string) {
   try {
-    const db = getDb();
-    const link = db.prepare('SELECT id FROM links WHERE id = ? AND user_id = ?').get(linkId, userId);
-    if (!link) return res.status(404).json({ error: 'Link not found' });
+    const db = await getDb();
+    const { rows: existRows } = await db.execute({
+      sql: 'SELECT id FROM links WHERE id = ? AND user_id = ?',
+      args: [linkId, userId],
+    });
+    if (!existRows[0]) return res.status(404).json({ error: 'Link not found' });
 
     const {
       title, url, description, type, icon_url, thumbnail_url,
@@ -75,10 +81,16 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, userId: st
     updates.push('updated_at = ?');
     values.push(now, linkId);
 
-    db.prepare(`UPDATE links SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    await db.execute({
+      sql: `UPDATE links SET ${updates.join(', ')} WHERE id = ?`,
+      args: values,
+    });
 
-    const updatedLink = db.prepare(`${LINK_SELECT} WHERE id = ?`).get(linkId);
-    return res.status(200).json(updatedLink);
+    const { rows: updatedRows } = await db.execute({
+      sql: `${LINK_SELECT} WHERE id = ?`,
+      args: [linkId],
+    });
+    return res.status(200).json(updatedRows[0] ?? null);
   } catch (error) {
     console.error('Update link error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -87,13 +99,20 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, userId: st
 
 async function handleDelete(req: NextApiRequest, res: NextApiResponse, userId: string, linkId: string) {
   try {
-    const db = getDb();
-    const link = db.prepare('SELECT id, position FROM links WHERE id = ? AND user_id = ?').get(linkId, userId) as any;
-    if (!link) return res.status(404).json({ error: 'Link not found' });
+    const db = await getDb();
+    const { rows } = await db.execute({
+      sql: 'SELECT id, position FROM links WHERE id = ? AND user_id = ?',
+      args: [linkId, userId],
+    });
+    if (!rows[0]) return res.status(404).json({ error: 'Link not found' });
+    const position = rows[0].position as number;
 
-    db.prepare('DELETE FROM links WHERE id = ?').run(linkId);
-    db.prepare('UPDATE links SET position = position - 1 WHERE user_id = ? AND position > ?').run(
-      userId, link.position as number
+    await db.batch(
+      [
+        { sql: 'DELETE FROM links WHERE id = ?', args: [linkId] },
+        { sql: 'UPDATE links SET position = position - 1 WHERE user_id = ? AND position > ?', args: [userId, position] },
+      ],
+      'write'
     );
 
     return res.status(204).end();

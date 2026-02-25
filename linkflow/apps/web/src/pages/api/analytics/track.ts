@@ -11,22 +11,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { userId, linkId, eventType, referrer, userAgent } = req.body;
 
-    // Validate required fields
     if (!userId || typeof userId !== 'string') {
       return res.status(400).json({ error: 'User ID is required' });
     }
-
     if (!eventType || typeof eventType !== 'string') {
       return res.status(400).json({ error: 'Event type is required' });
     }
 
-    const db = getDb();
+    const db = await getDb();
 
-    // Parse user agent
     let device = null;
     let browser = null;
     let os = null;
-
     if (userAgent) {
       const parser = new UAParser(userAgent);
       const result = parser.getResult();
@@ -35,33 +31,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       os = result.os.name || null;
     }
 
-    // Create analytics event
     const eventId = uuidv4();
     const now = new Date().toISOString();
 
-    db.prepare(
-      `
-      INSERT INTO analytics_events (id, user_id, link_id, event_type, device, browser, os, referrer, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `
-    ).run(eventId, userId, linkId || null, eventType, device, browser, os, referrer || null, now);
+    const stmts: any[] = [
+      {
+        sql: `INSERT INTO analytics_events (id, user_id, link_id, event_type, device_type, browser, os, referrer, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [eventId, userId, linkId || null, eventType, device, browser, os, referrer || null, now],
+      },
+    ];
 
-    // Increment link click count if this is a click event and linkId is provided
     if (eventType === 'click' && linkId) {
-      db.prepare('UPDATE links SET clicks = clicks + 1 WHERE id = ?').run(linkId);
+      stmts.push({
+        sql: 'UPDATE links SET click_count = click_count + 1, updated_at = ? WHERE id = ?',
+        args: [now, linkId],
+      });
     }
 
-    return res.status(201).json({
-      id: eventId,
-      userId,
-      linkId: linkId || null,
-      eventType,
-      device,
-      browser,
-      os,
-      referrer: referrer || null,
-      created_at: now,
-    });
+    await db.batch(stmts, 'write');
+
+    return res.status(201).json({ id: eventId, userId, linkId: linkId || null, eventType, device, browser, os, referrer: referrer || null, created_at: now });
   } catch (error) {
     console.error('Track event error:', error);
     return res.status(500).json({ error: 'Internal server error' });
