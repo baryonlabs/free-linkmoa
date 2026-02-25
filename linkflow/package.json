@@ -18,6 +18,8 @@
     "start:all": "concurrently \"npm run start\" \"npm run start:mcp\"",
     "migrate": "node scripts/migrate-db.js",
     "seed": "node scripts/seed.js",
+    "deploy": "fly deploy --dockerfile docker/Dockerfile",
+    "deploy:setup": "fly launch --name free-linkmoa --region nrt",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },

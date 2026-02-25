@@ -1,0 +1,47 @@
+# Fly.io configuration for LinkFlow
+# Deploy: fly deploy (from linkflow/ directory)
+
+app = "free-linkmoa"
+primary_region = "nrt"  # Tokyo (한국에서 가장 가까운 리전)
+
+[build]
+  dockerfile = "docker/Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"   # 트래픽 없으면 자동 슬립 → 비용 절감
+  auto_start_machines = true
+  min_machines_running = 0       # 평상시 0대 유지 (무료)
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+[[vm]]
+  size = "shared-cpu-1x"         # 무료 티어 VM
+  memory = "256mb"
+
+[[mounts]]
+  source = "linkflow_data"
+  destination = "/app/data"      # SQLite 파일 영구 저장
+  initial_size = "1gb"
+
+[[statics]]
+  guest_path = "/app/apps/web/.next/static"
+  url_prefix = "/_next/static"
+
+[checks]
+  [checks.health]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/api/health"
+    port = 3000
+    timeout = "5s"
+    type = "http"
