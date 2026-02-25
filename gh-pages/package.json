@@ -1,0 +1,12 @@
+{
+  "name": "free-linkmoa-pages",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}

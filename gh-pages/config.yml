@@ -1,0 +1,33 @@
+profile:
+  name: "홍길동"
+  bio: "개발자 & 크리에이터 ✨ 링크 모아봄"
+  avatar: ""  # GitHub 아바타: https://github.com/YOUR_USERNAME.png
+
+theme:
+  background: "#0f172a"
+  text: "#f8fafc"
+  button_bg: "#1e293b"
+  button_text: "#f8fafc"
+  button_hover: "#334155"
+  accent: "#6366f1"
+
+links:
+  - title: "인스타그램"
+    url: "https://instagram.com/your_handle"
+    icon: "instagram"
+    enabled: true
+
+  - title: "유튜브"
+    url: "https://youtube.com/@your_channel"
+    icon: "youtube"
+    enabled: true
+
+  - title: "블로그"
+    url: "https://myblog.com"
+    icon: "blog"
+    enabled: true
+
+  - title: "GitHub"
+    url: "https://github.com/your_username"
+    icon: "github"
+    enabled: true
