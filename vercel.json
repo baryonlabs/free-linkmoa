@@ -6,10 +6,5 @@
   "framework": "nextjs",
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "linkflow/apps/web/src/pages/api/**/*.ts": {
-      "maxDuration": 10
-    }
   }
 }

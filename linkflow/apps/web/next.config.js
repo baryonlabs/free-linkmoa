@@ -5,8 +5,6 @@ const nextConfig = {
     domains: ['localhost', 'avatars.githubusercontent.com'],
     unoptimized: true,
   },
-  // Allow importing from packages/ workspace
-  transpilePackages: ['@linkflow/types'],
 };
 
 module.exports = nextConfig;
