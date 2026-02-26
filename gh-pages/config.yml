@@ -14,7 +14,7 @@ theme:
 links:
   - title: "당근 'AI로 사업강화' 모임"
     url: "https://www.daangn.com/kr/group/%ED%81%B4%EB%A1%9C%EB%93%9C-ai%EB%A1%9C-%EC%82%AC%EC%97%85%EA%B0%95%ED%99%94-xwcut6bs4u3x/post/"
-    icon: "link"
+    icon: "carrot"
     enabled: true
 
   - title: "YouTube"
@@ -29,25 +29,27 @@ links:
 
   - title: "홈페이지"
     url: "https://labs.baryon.ai/"
-    icon: "link"
+    icon: "home"
     enabled: true
 
   - title: "HuggingFace"
     url: "https://huggingface.co/baryonlabs"
-    icon: "blog"
+    icon: "huggingface"
+    thumbnail: "https://huggingface.co/front/assets/huggingface_logo-noborder.svg"
     enabled: true
 
   - title: "GitHub"
     url: "https://github.com/Baryon-ai"
     icon: "github"
+    thumbnail: "https://github.com/Baryon-ai.png"
     enabled: true
 
   - title: "인프런"
     url: "https://www.inflearn.com/users/44011/@baryonai"
-    icon: "blog"
+    icon: "inflearn"
     enabled: true
 
   - title: "챌린지: \"앱 커팅\"시대! 나를 위한 앱 만들고 공유하기"
     url: "https://www.inflearn.com/challenge/quot%EC%95%B1-%EC%BB%A4%ED%8C%85quot%EC%8B%9C%EB%8C%80-%EB%82%98%EB%A5%BC-%EC%9C%84%ED%95%9C?cid=341120"
-    icon: "blog"
+    icon: "inflearn"
     enabled: true

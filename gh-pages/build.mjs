@@ -20,12 +20,12 @@ const { profile = {}, theme = {}, links = [] } = config;
 
 // ── 기본 테마 ────────────────────────────────────────────────────────────────
 const t = {
-  background: '#0f172a',
+  background: '#0a0f1e',
   text: '#f8fafc',
-  button_bg: '#1e293b',
+  button_bg: '#0f2044',
   button_text: '#f8fafc',
-  button_hover: '#334155',
-  accent: '#6366f1',
+  button_hover: '#1a3a6e',
+  accent: '#3b82f6',
   ...theme,
 };
 
@@ -44,6 +44,10 @@ const ICONS = {
   email: '📧',
   blog: '📝',
   link: '🔗',
+  carrot: '🥕',
+  huggingface: '🤗',
+  inflearn: '🎓',
+  home: '🏠',
 };
 
 const icon = (name) => ICONS[name?.toLowerCase()] ?? '🔗';
@@ -58,13 +62,18 @@ const bioHtml = profile.bio ? `<p class="bio">${esc(profile.bio)}</p>` : '';
 
 const linksHtml = links
   .filter((l) => l.enabled !== false)
-  .map(
-    (l) =>
+  .map((l) => {
+    const thumbHtml = l.thumbnail
+      ? `<div class="link-thumb"><img src="${esc(l.thumbnail)}" alt="${esc(l.title)}" class="thumb-img"></div>`
+      : `<div class="link-thumb thumb-emoji"><span>${icon(l.icon)}</span></div>`;
+    return (
       `<a href="${esc(l.url)}" class="link-btn" target="_blank" rel="noopener noreferrer">` +
-      `<span class="icon">${icon(l.icon)}</span>` +
-      `<span>${esc(l.title)}</span>` +
+      thumbHtml +
+      `<span class="link-title">${esc(l.title)}</span>` +
+      `<span class="link-arrow">›</span>` +
       `</a>`
-  )
+    );
+  })
   .join('\n      ');
 
 // ── CSS ─────────────────────────────────────────────────────────────────────
@@ -96,17 +105,81 @@ const css = `
   h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem; }
   .bio { opacity: 0.7; font-size: 0.95rem; line-height: 1.6; }
   .links { display: flex; flex-direction: column; gap: 0.75rem; }
+
+  /* ── 3D 카드 ── */
   .link-btn {
-    display: flex; align-items: center; justify-content: center; gap: 0.6rem;
-    padding: 1rem 1.5rem;
-    background: ${t.button_bg}; color: ${t.button_text};
-    text-decoration: none; border-radius: 12px;
-    font-size: 1rem; font-weight: 500;
-    transition: background 0.2s, transform 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.25rem 0.85rem 0.85rem;
+    background: ${t.button_bg};
+    color: ${t.button_text};
+    text-decoration: none;
+    border-radius: 16px;
+    font-size: 1rem;
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.07);
+    box-shadow:
+      0 4px 16px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.07);
+    transition:
+      transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.25s ease,
+      border-color 0.25s ease;
+    transform-style: preserve-3d;
+    will-change: transform;
+    cursor: pointer;
   }
-  .link-btn:hover { background: ${t.button_hover}; transform: translateY(-2px); }
-  .link-btn:active { transform: translateY(0); }
-  .icon { font-size: 1.2rem; }
+  /* 유리 반짝임 오버레이 */
+  .link-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 55%);
+    opacity: 0;
+    transition: opacity 0.25s;
+    pointer-events: none;
+  }
+  .link-btn:hover::before { opacity: 1; }
+  .link-btn:active {
+    transform: perspective(600px) translateY(-1px) scale(0.98) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+  }
+
+  /* ── 썸네일 ── */
+  .link-thumb {
+    width: 52px; height: 52px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: rgba(255,255,255,0.09);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .thumb-img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .thumb-emoji span {
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .link-title { flex: 1; }
+  .link-arrow {
+    font-size: 1.4rem;
+    opacity: 0.35;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .link-btn:hover .link-arrow {
+    opacity: 0.85;
+    transform: translateX(4px);
+  }
+
   footer { text-align: center; margin-top: 3rem; font-size: 0.78rem; opacity: 0.35; }
   footer a { color: inherit; text-decoration: none; }
 `.trim();
@@ -138,6 +211,25 @@ const html = `<!DOCTYPE html>
       <a href="https://github.com/baryonlabs/free-linkmoa">Powered by free-linkmoa</a>
     </footer>
   </div>
+
+  <!-- 마우스 추적 3D 틸트 효과 -->
+  <script>
+    document.querySelectorAll('.link-btn').forEach(btn => {
+      btn.addEventListener('mousemove', (e) => {
+        const r = btn.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width - 0.5;
+        const y = (e.clientY - r.top) / r.height - 0.5;
+        btn.style.transform = \`perspective(600px) rotateY(\${x * 14}deg) rotateX(\${-y * 8}deg) translateY(-5px) scale(1.01)\`;
+        btn.style.boxShadow = \`\${-x * 12}px \${(-y * 10) + 22}px 40px rgba(0,0,0,0.5), 0 8px 20px rgba(59,130,246,0.2), inset 0 1px 0 rgba(255,255,255,0.1)\`;
+        btn.style.borderColor = 'rgba(255,255,255,0.18)';
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.transform = '';
+        btn.style.boxShadow = '';
+        btn.style.borderColor = '';
+      });
+    });
+  </script>
 </body>
 </html>`;
 
