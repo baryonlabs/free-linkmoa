@@ -16,7 +16,7 @@ const DB_PATH =
   process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'linkflow.db');
 
 function buildUrl(): string {
-  if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL;
+  if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL.trim();
   // 로컬 파일 모드: data 디렉토리 생성
   const dataDir = path.dirname(DB_PATH);
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
@@ -30,7 +30,7 @@ export async function getDb(): Promise<Client> {
 
   client = createClient({
     url: buildUrl(),
-    authToken: process.env.TURSO_AUTH_TOKEN,
+    authToken: process.env.TURSO_AUTH_TOKEN?.trim(),
   });
 
   // 로컬 파일 DB만 자동 스키마 초기화 (Turso는 별도 마이그레이션)
