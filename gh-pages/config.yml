@@ -1,7 +1,7 @@
 profile:
-  name: "홍길동"
-  bio: "개발자 & 크리에이터 ✨ 링크 모아봄"
-  avatar: ""  # GitHub 아바타: https://github.com/YOUR_USERNAME.png
+  name: "hongsw"
+  bio: "개발자 & 크리에이터 ✨ AI-native 실험 중"
+  avatar: "https://github.com/hongsw.png"
 
 theme:
   background: "#0f172a"
@@ -12,22 +12,17 @@ theme:
   accent: "#6366f1"
 
 links:
+  - title: "GitHub"
+    url: "https://github.com/hongsw"
+    icon: "github"
+    enabled: true
+
+  - title: "LinkFlow 앱 (Vercel)"
+    url: "https://free-linkmoa.vercel.app"
+    icon: "link"
+    enabled: true
+
   - title: "인스타그램"
     url: "https://instagram.com/your_handle"
     icon: "instagram"
-    enabled: true
-
-  - title: "유튜브"
-    url: "https://youtube.com/@your_channel"
-    icon: "youtube"
-    enabled: true
-
-  - title: "블로그"
-    url: "https://myblog.com"
-    icon: "blog"
-    enabled: true
-
-  - title: "GitHub"
-    url: "https://github.com/your_username"
-    icon: "github"
-    enabled: true
+    enabled: false
