@@ -56,12 +56,11 @@ GitHub Actions: 자동 빌드 → 배포 완료 (약 1분)
 
 > 아래 링크에서 라이브로 확인하세요.
 
-| GitHub Pages (정적 사이트) | Vercel 대시보드 (풀스택) |
-|---------------------------|------------------------|
-| [![GitHub Pages](https://img.shields.io/badge/열기-baryonlabs.github.io-0a0f1e?style=flat-square&logo=github)](https://baryonlabs.github.io/free-linkmoa/) | [![Vercel](https://img.shields.io/badge/열기-free--linkmoa.vercel.app-000?style=flat-square&logo=vercel)](https://free-linkmoa.vercel.app) |
+| GitHub Pages (정적 사이트) | Vercel 앱 (풀스택) |
+|:---:|:---:|
+| [![GitHub Pages](docs/images/github-pages.png)](https://baryonlabs.github.io/free-linkmoa/) | [![Vercel](docs/images/vercel-app.png)](https://free-linkmoa.vercel.app) |
+| [baryonlabs.github.io/free-linkmoa](https://baryonlabs.github.io/free-linkmoa/) | [free-linkmoa.vercel.app](https://free-linkmoa.vercel.app) |
 | YAML 수정만 하면 자동 배포 | 대시보드 + API + DB 포함 |
-
-> 스크린샷 이미지: `docs/images/` 폴더에 추가 예정
 
 ---
 
