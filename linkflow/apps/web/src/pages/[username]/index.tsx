@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { GetServerSideProps } from 'next';
 import Link from 'next/link';
+import { getDb } from '@/lib/db';
 
 interface SocialIcon {
   platform: string;
@@ -349,33 +350,64 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const { username } = context.params as { username: string };
 
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const response = await fetch(`${baseUrl}/api/profiles/${username}`);
+    const db = await getDb();
 
-    if (!response.ok) {
-      return {
-        props: {
-          profile: null,
-          error: 'Profile not found',
-        },
-      };
+    const { rows: userRows } = await db.execute({
+      sql: 'SELECT id, username FROM users WHERE username = ?',
+      args: [username],
+    });
+    const user = userRows[0] as any;
+    if (!user) {
+      return { props: { profile: null, error: `'${username}' 프로필을 찾을 수 없습니다` } };
     }
 
-    const profile = await response.json();
+    const { rows: profileRows } = await db.execute({
+      sql: 'SELECT title, bio, avatar_url, social_links FROM profiles WHERE user_id = ?',
+      args: [user.id],
+    });
+    const profile = profileRows[0] as any;
+
+    const { rows: linkRows } = await db.execute({
+      sql: `SELECT id, title, url, description, type, animation_type,
+                   highlight, enabled, scheduled_from, scheduled_to
+            FROM links WHERE user_id = ? AND enabled = 1 ORDER BY position ASC`,
+      args: [user.id],
+    });
+
+    const socialLinks = profile?.social_links
+      ? JSON.parse(profile.social_links as string)
+      : [];
 
     return {
       props: {
-        profile,
+        profile: {
+          id: user.id,
+          username: user.username,
+          title: profile?.title || user.username,
+          bio: profile?.bio || null,
+          avatar: profile?.avatar_url || null,
+          total_views: 0,
+          email_subscription_enabled: false,
+          social_icons: Array.isArray(socialLinks) ? socialLinks : [],
+          theme: null,
+          links: linkRows.map((l: any) => ({
+            id: l.id,
+            title: l.title,
+            url: l.url,
+            description: l.description || null,
+            type: l.type || 'link',
+            animation_type: l.animation_type || null,
+            is_highlighted: Boolean(l.highlight),
+            is_scheduled: Boolean(l.scheduled_from && l.scheduled_to),
+            scheduled_start: l.scheduled_from || null,
+            scheduled_end: l.scheduled_to || null,
+            enabled: Boolean(l.enabled),
+          })),
+        },
       },
     };
   } catch (error) {
-    console.error('Error fetching profile:', error);
-    return {
-      props: {
-        profile: null,
-        error: 'Failed to load profile',
-      },
-    };
+    console.error('Profile page error:', error);
+    return { props: { profile: null, error: 'Failed to load profile' } };
   }
 };
