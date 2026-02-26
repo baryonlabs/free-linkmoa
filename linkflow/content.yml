@@ -45,7 +45,7 @@ links:
     enabled: true
 
   - title: "인프런"
-    url: "https://www.inflearn.com/challenge/"
+    url: "https://www.inflearn.com/users/44011/@baryonai"
     type: link
-    description: "AI 개발 강의 & 챌린지"
+    description: "Baryon Labs 인프런 강의 페이지"
     enabled: true
