@@ -56,11 +56,11 @@ GitHub Actions: 자동 빌드 → 배포 완료 (약 1분)
 
 > 아래 링크에서 라이브로 확인하세요.
 
-| GitHub Pages (정적 사이트) | Vercel 앱 (풀스택) |
-|:---:|:---:|
-| [![GitHub Pages](docs/images/github-pages.png)](https://baryonlabs.github.io/free-linkmoa/) | [![Vercel](docs/images/vercel-app.png)](https://free-linkmoa.vercel.app) |
-| [baryonlabs.github.io/free-linkmoa](https://baryonlabs.github.io/free-linkmoa/) | [free-linkmoa.vercel.app](https://free-linkmoa.vercel.app) |
-| YAML 수정만 하면 자동 배포 | 대시보드 + API + DB 포함 |
+| GitHub Pages (정적 사이트) | Vercel 공개 프로필 | Vercel 대시보드 |
+|:---:|:---:|:---:|
+| [![GitHub Pages](docs/images/github-pages.png)](https://baryonlabs.github.io/free-linkmoa/) | [![Vercel Profile](docs/images/vercel-profile-aiswai2.png)](https://free-linkmoa.vercel.app/aiswai2) | [![Vercel Dashboard](docs/images/vercel-dashboard.png)](https://free-linkmoa.vercel.app/dashboard) |
+| [baryonlabs.github.io/free-linkmoa](https://baryonlabs.github.io/free-linkmoa/) | [/aiswai2](https://free-linkmoa.vercel.app/aiswai2) | [/dashboard](https://free-linkmoa.vercel.app/dashboard) |
+| YAML 수정 → 자동 빌드 | 공개 링크 페이지 | 링크 관리 대시보드 |
 
 ---
 
@@ -179,6 +179,32 @@ Claude Code를 사용하면 말만 해도 자동 수정 + 배포됩니다.
 
 ---
 
+## MCP 서버 — Claude Desktop 연결
+
+LinkFlow MCP 서버를 Claude Desktop에 연결하면 **대화만으로** 링크를 관리할 수 있습니다.
+
+```bash
+# 1회 설정 (로그인 + Claude Desktop 자동 등록)
+bash scripts/mcp-setup.sh
+```
+
+Claude Desktop 재시작 후 대화창에서 바로 사용:
+
+| 자연어 요청 | MCP 툴 | 동작 |
+|------------|--------|------|
+| `내 링크 목록 보여줘` | `list_links` | 전체 링크 조회 |
+| `YouTube 링크 추가해줘: https://...` | `create_link` | 링크 생성 |
+| `GitHub 링크 설명 바꿔줘` | `update_link` | 링크 수정 |
+| `링크 3개 한번에 추가해줘` | `create_link` × 3 (병렬) | 동시 추가 |
+| `프로필 소개글 수정해줘` | `update_profile` | 프로필 업데이트 |
+| `링크 순서 바꿔줘` | `reorder_links` | 순서 변경 |
+
+```
+Claude Desktop → stdio → MCP Server → HTTPS → Vercel API → Turso DB
+```
+
+---
+
 ## 실습 1: Vercel + Turso 시작하기
 
 ```bash
@@ -209,6 +235,7 @@ vercel deploy --prod --cwd linkflow/apps/web
 | 배포 | GitHub Pages, Vercel |
 | 자동화 | GitHub Actions |
 | AI 편집 | Claude Code + linkflow skill |
+| MCP 서버 | @modelcontextprotocol/sdk, tsx |
 
 ---
 

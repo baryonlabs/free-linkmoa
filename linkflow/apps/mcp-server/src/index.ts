@@ -1,9 +1,7 @@
-import {
-  Server,
-  StdioServerTransport,
-  Tool,
-} from '@modelcontextprotocol/sdk/server/index.js';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 
 import { profileTools, handleGetProfile, handleUpdateProfile } from './tools/profile.js';
 import {
