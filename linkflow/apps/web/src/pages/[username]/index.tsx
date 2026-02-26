@@ -339,6 +339,10 @@ export default function PublicProfile({ profile, error }: Props) {
             <a href="/" className="hover:text-slate-900 dark:hover:text-white transition-colors">
               LinkFlow
             </a>
+            {' · '}
+            <a href="https://labs.baryon.ai" target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 dark:hover:text-white transition-colors">
+              Baryon Labs
+            </a>
           </p>
         </div>
       </div>
