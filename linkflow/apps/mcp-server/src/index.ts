@@ -78,53 +78,53 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // Profile tools
     if (toolName === 'get_profile') {
-      result = handleGetProfile();
+      result = await handleGetProfile();
     } else if (toolName === 'update_profile') {
-      result = handleUpdateProfile(args);
+      result = await handleUpdateProfile(args);
     }
     // Link tools
     else if (toolName === 'list_links') {
-      result = handleListLinks();
+      result = await handleListLinks();
     } else if (toolName === 'create_link') {
-      result = handleCreateLink(args);
+      result = await handleCreateLink(args);
     } else if (toolName === 'update_link') {
-      result = handleUpdateLink(args);
+      result = await handleUpdateLink(args);
     } else if (toolName === 'delete_link') {
-      result = handleDeleteLink(args);
+      result = await handleDeleteLink(args);
     } else if (toolName === 'reorder_links') {
-      result = handleReorderLinks(args);
+      result = await handleReorderLinks(args);
     }
     // Theme tools
     else if (toolName === 'list_themes') {
-      result = handleListThemes();
+      result = await handleListThemes();
     } else if (toolName === 'apply_theme') {
-      result = handleApplyTheme(args);
+      result = await handleApplyTheme(args);
     } else if (toolName === 'create_theme') {
-      result = handleCreateTheme(args);
+      result = await handleCreateTheme(args);
     } else if (toolName === 'update_theme') {
-      result = handleUpdateTheme(args);
+      result = await handleUpdateTheme(args);
     }
     // Analytics tools
     else if (toolName === 'get_analytics') {
-      result = handleGetAnalytics(args);
+      result = await handleGetAnalytics(args);
     } else if (toolName === 'get_link_analytics') {
-      result = handleGetLinkAnalytics(args);
+      result = await handleGetLinkAnalytics(args);
     }
     // Plugin tools
     else if (toolName === 'list_plugins') {
-      result = handleListPlugins();
+      result = await handleListPlugins();
     } else if (toolName === 'install_plugin') {
-      result = handleInstallPlugin(args);
+      result = await handleInstallPlugin(args);
     } else if (toolName === 'uninstall_plugin') {
-      result = handleUninstallPlugin(args);
+      result = await handleUninstallPlugin(args);
     } else if (toolName === 'configure_plugin') {
-      result = handleConfigurePlugin(args);
+      result = await handleConfigurePlugin(args);
     }
     // Subscriber tools
     else if (toolName === 'list_subscribers') {
-      result = handleListSubscribers(args);
+      result = await handleListSubscribers(args);
     } else if (toolName === 'export_subscribers') {
-      result = handleExportSubscribers();
+      result = await handleExportSubscribers();
     } else {
       return {
         content: [
