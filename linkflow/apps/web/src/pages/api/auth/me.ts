@@ -3,6 +3,9 @@ import { withAuth, AuthTokenPayload } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 
 export default withAuth(async function handler(req: NextApiRequest, res: NextApiResponse, user: AuthTokenPayload) {
+  if (req.method === 'PATCH') {
+    return handlePatch(req, res, user.userId);
+  }
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -36,3 +39,29 @@ export default withAuth(async function handler(req: NextApiRequest, res: NextApi
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+async function handlePatch(req: NextApiRequest, res: NextApiResponse, userId: string) {
+  try {
+    const { username } = req.body;
+    if (!username) return res.status(400).json({ error: 'username is required' });
+    if (!/^[a-zA-Z0-9_-]{3,30}$/.test(username)) {
+      return res.status(400).json({ error: 'username must be 3-30 chars (letters, numbers, _, -)' });
+    }
+
+    const db = await getDb();
+    const { rows: existing } = await db.execute({
+      sql: 'SELECT id FROM users WHERE username = ? AND id != ?',
+      args: [username, userId],
+    });
+    if (existing.length > 0) return res.status(409).json({ error: 'Username already taken' });
+
+    await db.execute({
+      sql: 'UPDATE users SET username = ? WHERE id = ?',
+      args: [username, userId],
+    });
+    return res.status(200).json({ username });
+  } catch (error) {
+    console.error('Update username error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
