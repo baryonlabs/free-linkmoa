@@ -1,0 +1,21 @@
+# LinkFlow 콘텐츠 설정
+# 이 파일을 수정하고 git push하면 Vercel 앱에 자동 반영됩니다.
+# Claude에게 "링크 추가해줘", "소개글 바꿔줘" 라고 말하면 AI가 직접 수정합니다.
+
+profile:
+  title: "hongsw"
+  bio: "AI-native 개발자 🚀"
+  avatar_url: "https://github.com/hongsw.png"
+
+links:
+  - title: "GitHub"
+    url: "https://github.com/hongsw"
+    type: link
+    description: "내 코드 저장소"
+    enabled: true
+
+  - title: "LinkFlow 소스코드"
+    url: "https://github.com/baryonlabs/free-linkmoa"
+    type: link
+    description: "이 프로젝트 오픈소스"
+    enabled: true

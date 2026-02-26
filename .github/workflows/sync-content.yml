@@ -1,0 +1,27 @@
+name: Sync content.yml → Vercel App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'linkflow/content.yml'
+
+  workflow_dispatch:  # 수동 실행 가능
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Sync content to Vercel app
+        env:
+          LINKFLOW_URL: ${{ secrets.LINKFLOW_URL }}
+          LINKFLOW_EMAIL: ${{ secrets.LINKFLOW_EMAIL }}
+          LINKFLOW_PASSWORD: ${{ secrets.LINKFLOW_PASSWORD }}
+        run: |
+          chmod +x scripts/sync-content.sh
+          bash scripts/sync-content.sh linkflow/content.yml
