@@ -49,3 +49,9 @@ links:
     type: link
     description: "Baryon Labs 인프런 강의 페이지"
     enabled: true
+
+  - title: "챌린지: \"앱 커팅\"시대! 나를 위한 앱 만들고 공유하기"
+    url: "https://www.inflearn.com/challenge/quot%EC%95%B1-%EC%BB%A4%ED%8C%85quot%EC%8B%9C%EB%8C%80-%EB%82%98%EB%A5%BC-%EC%9C%84%ED%95%9C?cid=341120"
+    type: link
+    description: "인프런 챌린지 - AI로 나만의 앱 만들기"
+    enabled: true
