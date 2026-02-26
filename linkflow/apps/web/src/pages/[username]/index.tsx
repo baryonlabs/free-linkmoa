@@ -141,16 +141,7 @@ export default function PublicProfile({ profile, error }: Props) {
     }
   };
 
-  const themeVars = profile.theme
-    ? {
-        '--primary-color': profile.theme.primary_color || '#3b82f6',
-        '--secondary-color': profile.theme.secondary_color || '#8b5cf6',
-        '--background-color': profile.theme.background_color || '#ffffff',
-        '--text-color': profile.theme.text_color || '#000000',
-      }
-    : {};
-
-  if (error) {
+  if (error || !profile) {
     return (
       <>
         <Head>
@@ -159,7 +150,7 @@ export default function PublicProfile({ profile, error }: Props) {
         <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Profile Not Found</h1>
-            <p className="text-slate-600 dark:text-slate-400 mb-6">{error}</p>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">{error || 'Profile not found'}</p>
             <Link href="/" className="btn-primary">
               Back to Home
             </Link>
@@ -168,6 +159,15 @@ export default function PublicProfile({ profile, error }: Props) {
       </>
     );
   }
+
+  const themeVars = profile.theme
+    ? {
+        '--primary-color': profile.theme.primary_color || '#3b82f6',
+        '--secondary-color': profile.theme.secondary_color || '#8b5cf6',
+        '--background-color': profile.theme.background_color || '#ffffff',
+        '--text-color': profile.theme.text_color || '#000000',
+      }
+    : {};
 
   return (
     <>
@@ -349,7 +349,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const { username } = context.params as { username: string };
 
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
     const response = await fetch(`${baseUrl}/api/profiles/${username}`);
 
     if (!response.ok) {
@@ -367,7 +368,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       props: {
         profile,
       },
-      revalidate: 60, // ISR: revalidate every 60 seconds
     };
   } catch (error) {
     console.error('Error fetching profile:', error);
