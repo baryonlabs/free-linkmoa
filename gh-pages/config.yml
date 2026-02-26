@@ -1,28 +1,48 @@
 profile:
-  name: "hongsw"
-  bio: "개발자 & 크리에이터 ✨ AI-native 실험 중"
-  avatar: "https://github.com/hongsw.png"
+  name: "Baryon Labs"
+  bio: "AI-native 개발 & 교육 🚀 | Claude AI로 함께 만들어가는 미래"
+  avatar: "https://github.com/Baryon-ai.png"
 
 theme:
-  background: "#0f172a"
+  background: "#0a0f1e"
   text: "#f8fafc"
-  button_bg: "#1e293b"
+  button_bg: "#0f2044"
   button_text: "#f8fafc"
-  button_hover: "#334155"
-  accent: "#6366f1"
+  button_hover: "#1a3a6e"
+  accent: "#3b82f6"
 
 links:
-  - title: "GitHub"
-    url: "https://github.com/hongsw"
-    icon: "github"
-    enabled: true
-
-  - title: "LinkFlow 앱 (Vercel)"
-    url: "https://free-linkmoa.vercel.app"
+  - title: "당근 'AI로 사업강화' 모임"
+    url: "https://www.daangn.com/kr/group/%ED%81%B4%EB%A1%9C%EB%93%9C-ai%EB%A1%9C-%EC%82%AC%EC%97%85%EA%B0%95%ED%99%94-xwcut6bs4u3x/post/"
     icon: "link"
     enabled: true
 
-  - title: "인스타그램"
-    url: "https://instagram.com/your_handle"
-    icon: "instagram"
-    enabled: false
+  - title: "YouTube"
+    url: "https://www.youtube.com/@codcatprofessor/shorts"
+    icon: "youtube"
+    enabled: true
+
+  - title: "LinkedIn"
+    url: "https://www.linkedin.com/in/martin-hong-sw/"
+    icon: "linkedin"
+    enabled: true
+
+  - title: "홈페이지"
+    url: "https://labs.baryon.ai/"
+    icon: "link"
+    enabled: true
+
+  - title: "HuggingFace"
+    url: "https://huggingface.co/baryonlabs"
+    icon: "blog"
+    enabled: true
+
+  - title: "GitHub"
+    url: "https://github.com/Baryon-ai"
+    icon: "github"
+    enabled: true
+
+  - title: "인프런"
+    url: "https://www.inflearn.com/challenge/"
+    icon: "blog"
+    enabled: true
