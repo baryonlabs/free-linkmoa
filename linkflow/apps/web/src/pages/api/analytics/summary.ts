@@ -69,11 +69,18 @@ export default withAuth(async function handler(req: NextApiRequest, res: NextApi
       args: [userId],
     });
 
+    const { rows: subRows } = await db.execute({
+      sql: 'SELECT COUNT(*) as count FROM subscribers WHERE user_id = ?',
+      args: [userId],
+    });
+    const subscriberCount = (subRows[0] as any)?.count || 0;
+
     return res.status(200).json({
       timeRange: range,
-      totalViews,
-      totalClicks,
-      clickRate: parseFloat(clickRate),
+      total_views: totalViews,
+      total_clicks: totalClicks,
+      ctr: parseFloat(clickRate) / 100,
+      subscriber_count: subscriberCount,
       topLinks,
       deviceBreakdown,
       locationBreakdown,
