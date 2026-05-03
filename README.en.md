@@ -316,7 +316,10 @@ The copyright for this code and documentation belongs to Baryon Labs.
 
 Free Linkmoa is used as a course example at [vibecamp.us](https://vibecamp.us) for teaching vibe coding and AI coding. The course uses this repository to show how to build, deploy, and iteratively modify a link-in-bio service with AI while learning the practical CS knowledge needed to review and guide AI-generated code.
 
-This project is also introduced at [ai-native.vibecamp.us](https://ai-native.vibecamp.us) as an AI-native development example. Teams or organizations that want to learn the workflow in more depth can contact Baryon Labs or VibeCamp.
+> **For teams and organizations that want to learn AI-native development in depth**
+>
+> This project is also introduced at **[ai-native.vibecamp.us](https://ai-native.vibecamp.us)** as an **AI-native development example**.
+> Teams or organizations that want to apply this workflow in practice can **contact Baryon Labs or VibeCamp.**
 
 The project is licensed under MIT. See [linkflow/LICENSE](linkflow/LICENSE).
 

@@ -314,7 +314,10 @@ Free Linkmoa를 만드는 과정에서 한 가지가 더 분명해졌습니다. 
 
 Free Linkmoa는 [vibecamp.us](https://vibecamp.us)에서 바이브코딩과 AI coding을 설명하기 위한 강의 예제로 사용됩니다. 강의에서는 이 저장소를 바탕으로 링크인바이오 서비스를 만들고, 배포하고, AI와 함께 수정하는 과정을 통해 실전 개발 흐름과 필요한 CS 지식을 함께 다룹니다.
 
-이 프로젝트는 [ai-native.vibecamp.us](https://ai-native.vibecamp.us)에서도 AI-Native 개발 사례로 소개하고 있습니다. 더 자세히 배우고 싶은 팀이나 조직은 Baryon Labs 또는 VibeCamp로 컨택해 주세요.
+> **AI-Native 개발을 더 깊게 배우고 싶은 팀/조직을 위한 안내**
+>
+> 이 프로젝트는 **[ai-native.vibecamp.us](https://ai-native.vibecamp.us)** 에서도 **AI-Native 개발 사례**로 소개하고 있습니다.
+> 실제 팀이나 조직에 AI-Native 개발 방식을 적용하는 법을 더 자세히 배우고 싶다면 **Baryon Labs 또는 VibeCamp로 컨택해 주세요.**
 
 라이선스는 MIT입니다. 자세한 내용은 [linkflow/LICENSE](linkflow/LICENSE)를 참고하세요.
 
