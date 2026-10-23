@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { withAuth, AuthTokenPayload } from '@/lib/auth';
 import { getDb } from '@/lib/db';
+import { safeUrl } from '@/lib/url';
 
 export default withAuth(async function handler(req: NextApiRequest, res: NextApiResponse, user: AuthTokenPayload) {
   const { id } = req.query;
@@ -61,7 +62,10 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, userId: st
     const addField = (col: string, val: any) => { updates.push(`${col} = ?`); values.push(val); };
 
     if (title !== undefined) addField('title', title);
-    if (url !== undefined) addField('url', url);
+    if (url !== undefined) {
+      if (!safeUrl(url)) return res.status(400).json({ error: 'URL must be http(s), mailto or tel' });
+      addField('url', url);
+    }
     if (description !== undefined) addField('description', description);
     if (type !== undefined) addField('type', type);
     if (icon_url !== undefined) addField('icon_url', icon_url);

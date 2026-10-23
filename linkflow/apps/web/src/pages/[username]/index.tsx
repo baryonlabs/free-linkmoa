@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { GetServerSideProps } from 'next';
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
+import { safeUrl } from '@/lib/url';
 
 interface SocialIcon {
   platform: string;
@@ -92,7 +93,9 @@ export default function PublicProfile({ profile, error }: Props) {
   const handleLinkClick = (link: LinkItem) => {
     trackEvent('link_click', link.id);
     setClicked(link.id);
-    setTimeout(() => window.open(link.url, '_blank'), 100);
+    // 이미 저장된 javascript: 등 위험한 URL도 렌더링 단계에서 한 번 더 막는다
+    const url = safeUrl(link.url);
+    if (url) setTimeout(() => window.open(url, '_blank', 'noopener'), 100);
   };
 
   const handleSubscribe = async (e: React.FormEvent) => {
@@ -210,7 +213,7 @@ export default function PublicProfile({ profile, error }: Props) {
                 {profile.social_icons.map((social) => (
                   <a
                     key={social.platform}
-                    href={social.url}
+                    href={safeUrl(social.url) ?? '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-10 h-10 rounded-full bg-blue-100 dark:bg-slate-800 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-slate-700 transition-colors duration-200"

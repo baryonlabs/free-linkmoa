@@ -4,7 +4,14 @@ import { v4 as uuid } from 'uuid';
 import { getDb } from './db';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'linkflow-dev-secret-change-in-production';
+// 운영에서 JWT_SECRET 이 없으면 공개 저장소의 기본값으로 아무 토큰이나 위조된다 — 기본값은 개발에서만.
+const DEV_JWT_SECRET = 'linkflow-dev-secret-change-in-production';
+function jwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === 'production') throw new Error('JWT_SECRET is required in production');
+  return DEV_JWT_SECRET;
+}
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '7d';
 
 export interface AuthTokenPayload {
@@ -26,11 +33,11 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function generateToken(payload: AuthTokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY as any });
+  return jwt.sign(payload, jwtSecret(), { algorithm: 'HS256', expiresIn: JWT_EXPIRY as any });
 }
 
 export function verifyToken(token: string): AuthTokenPayload {
-  return jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
+  return jwt.verify(token, jwtSecret(), { algorithms: ['HS256'] }) as AuthTokenPayload;
 }
 
 export function getTokenFromRequest(req: NextApiRequest): string | null {

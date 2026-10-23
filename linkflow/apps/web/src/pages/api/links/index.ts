@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { withAuth, AuthTokenPayload } from '@/lib/auth';
 import { getDb } from '@/lib/db';
+import { safeUrl } from '@/lib/url';
 import { v4 as uuidv4 } from 'uuid';
 
 export default withAuth(async function handler(req: NextApiRequest, res: NextApiResponse, user: AuthTokenPayload) {
@@ -45,6 +46,9 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, userId: str
     }
     if (!url || typeof url !== 'string') {
       return res.status(400).json({ error: 'URL is required' });
+    }
+    if (!safeUrl(url)) {
+      return res.status(400).json({ error: 'URL must be http(s), mailto or tel' });
     }
 
     const { rows: maxRows } = await db.execute({

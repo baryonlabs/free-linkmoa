@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { withAuth, AuthTokenPayload } from '@/lib/auth';
 import { getDb } from '@/lib/db';
+import { safeUrl } from '@/lib/url';
 
 export default withAuth(async function handler(req: NextApiRequest, res: NextApiResponse, user: AuthTokenPayload) {
   const userId = user.userId;
@@ -57,7 +58,13 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, userId: st
     if (bio !== undefined) addField('bio', bio);
     if (avatar_url !== undefined) addField('avatar_url', avatar_url);
     if (custom_logo_url !== undefined) addField('custom_logo_url', custom_logo_url);
-    if (social_links !== undefined) addField('social_links', JSON.stringify(social_links));
+    if (social_links !== undefined) {
+      const items = Array.isArray(social_links) ? social_links : [];
+      if (items.some((s: any) => !s || !safeUrl(s.url))) {
+        return res.status(400).json({ error: 'Social link URLs must be http(s), mailto or tel' });
+      }
+      addField('social_links', JSON.stringify(items));
+    }
     if (theme_id !== undefined) addField('theme_id', theme_id);
     if (seo_title !== undefined) addField('seo_title', seo_title);
     if (seo_description !== undefined) addField('seo_description', seo_description);
